@@ -1,0 +1,9 @@
+[workspace]
+members = [
+    "spot_sbe",
+    "sbe-sample-app",
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
