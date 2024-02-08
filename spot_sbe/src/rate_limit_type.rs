@@ -2,6 +2,7 @@
 #[repr(u8)]
 pub enum RateLimitType {
     RawRequests = 0x0_u8,
+    Connections = 0x1_u8,
     RequestWeight = 0x2_u8,
     Orders = 0x3_u8,
     #[default]
@@ -12,6 +13,7 @@ impl From<u8> for RateLimitType {
     fn from(v: u8) -> Self {
         match v {
             0x0_u8 => Self::RawRequests,
+            0x1_u8 => Self::Connections,
             0x2_u8 => Self::RequestWeight,
             0x3_u8 => Self::Orders,
             _ => Self::NullVal,

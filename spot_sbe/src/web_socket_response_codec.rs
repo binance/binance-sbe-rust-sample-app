@@ -1,10 +1,10 @@
 use crate::*;
 
-pub use decoder::AccountOrderRateLimitResponseDecoder;
-pub use encoder::AccountOrderRateLimitResponseEncoder;
+pub use decoder::WebSocketResponseDecoder;
+pub use encoder::WebSocketResponseEncoder;
 
-pub const SBE_BLOCK_LENGTH: u16 = 0;
-pub const SBE_TEMPLATE_ID: u16 = 402;
+pub const SBE_BLOCK_LENGTH: u16 = 3;
+pub const SBE_TEMPLATE_ID: u16 = 50;
 pub const SBE_SCHEMA_ID: u16 = 1;
 pub const SBE_SCHEMA_VERSION: u16 = 0;
 pub const SBE_SEMANTIC_VERSION: &str = "5.2";
@@ -13,21 +13,21 @@ pub mod encoder {
     use super::*;
 
     #[derive(Debug, Default)]
-    pub struct AccountOrderRateLimitResponseEncoder<'a> {
+    pub struct WebSocketResponseEncoder<'a> {
         buf: WriteBuf<'a>,
         initial_offset: usize,
         offset: usize,
         limit: usize,
     }
 
-    impl<'a> Writer<'a> for AccountOrderRateLimitResponseEncoder<'a> {
+    impl<'a> Writer<'a> for WebSocketResponseEncoder<'a> {
         #[inline]
         fn get_buf_mut(&mut self) -> &mut WriteBuf<'a> {
             &mut self.buf
         }
     }
 
-    impl<'a> Encoder<'a> for AccountOrderRateLimitResponseEncoder<'a> {
+    impl<'a> Encoder<'a> for WebSocketResponseEncoder<'a> {
         #[inline]
         fn get_limit(&self) -> usize {
             self.limit
@@ -39,7 +39,7 @@ pub mod encoder {
         }
     }
 
-    impl<'a> AccountOrderRateLimitResponseEncoder<'a> {
+    impl<'a> WebSocketResponseEncoder<'a> {
         pub fn wrap(mut self, buf: WriteBuf<'a>, offset: usize) -> Self {
             let limit = offset + SBE_BLOCK_LENGTH as usize;
             self.buf = buf;
@@ -63,21 +63,62 @@ pub mod encoder {
             header
         }
 
+        /// REQUIRED enum
+        #[inline]
+        pub fn sbe_schema_id_version_deprecated(&mut self, value: BoolEnum) {
+            let offset = self.offset;
+            self.get_buf_mut().put_u8_at(offset, value as u8)
+        }
+
+        /// primitive field 'status'
+        /// - min value: 0
+        /// - max value: 65534
+        /// - null value: 65535
+        /// - characterEncoding: null
+        /// - semanticType: null
+        /// - encodedOffset: 1
+        /// - encodedLength: 2
+        #[inline]
+        pub fn status(&mut self, value: u16) {
+            let offset = self.offset + 1;
+            self.get_buf_mut().put_u16_at(offset, value);
+        }
+
         /// GROUP ENCODER (id=100)
         #[inline]
         pub fn rate_limits_encoder(
             self,
-            count: u32,
+            count: u16,
             rate_limits_encoder: RateLimitsEncoder<Self>,
         ) -> RateLimitsEncoder<Self> {
             rate_limits_encoder.wrap(self, count)
+        }
+
+        /// VAR_DATA ENCODER - character encoding: 'UTF-8'
+        #[inline]
+        pub fn id(&mut self, value: &str) {
+            let limit = self.get_limit();
+            let data_length = value.len();
+            self.set_limit(limit + 1 + data_length);
+            self.get_buf_mut().put_u8_at(limit, data_length as u8);
+            self.get_buf_mut().put_slice_at(limit + 1, value.as_bytes());
+        }
+
+        /// VAR_DATA ENCODER - character encoding: 'None'
+        #[inline]
+        pub fn result(&mut self, value: &[u8]) {
+            let limit = self.get_limit();
+            let data_length = value.len();
+            self.set_limit(limit + 4 + data_length);
+            self.get_buf_mut().put_u32_at(limit, data_length as u32);
+            self.get_buf_mut().put_slice_at(limit + 4, value);
         }
     }
 
     #[derive(Debug, Default)]
     pub struct RateLimitsEncoder<P> {
         parent: Option<P>,
-        count: u32,
+        count: u16,
         index: usize,
         offset: usize,
         initial_limit: usize,
@@ -120,13 +161,13 @@ pub mod encoder {
         P: Encoder<'a> + Default,
     {
         #[inline]
-        pub fn wrap(mut self, mut parent: P, count: u32) -> Self {
+        pub fn wrap(mut self, mut parent: P, count: u16) -> Self {
             let initial_limit = parent.get_limit();
-            parent.set_limit(initial_limit + 6);
+            parent.set_limit(initial_limit + 4);
             parent
                 .get_buf_mut()
                 .put_u16_at(initial_limit, Self::block_length());
-            parent.get_buf_mut().put_u32_at(initial_limit + 2, count);
+            parent.get_buf_mut().put_u16_at(initial_limit + 2, count);
             self.parent = Some(parent);
             self.count = count;
             self.index = usize::MAX;
@@ -204,7 +245,7 @@ pub mod encoder {
             self.get_buf_mut().put_i64_at(offset, value);
         }
 
-        /// primitive field 'numOrders'
+        /// primitive field 'current'
         /// - min value: -9223372036854775807
         /// - max value: 9223372036854775807
         /// - null value: -9223372036854775808
@@ -213,7 +254,7 @@ pub mod encoder {
         /// - encodedOffset: 11
         /// - encodedLength: 8
         #[inline]
-        pub fn num_orders(&mut self, value: i64) {
+        pub fn current(&mut self, value: i64) {
             let offset = self.offset + 11;
             self.get_buf_mut().put_i64_at(offset, value);
         }
@@ -224,7 +265,7 @@ pub mod decoder {
     use super::*;
 
     #[derive(Clone, Copy, Debug, Default)]
-    pub struct AccountOrderRateLimitResponseDecoder<'a> {
+    pub struct WebSocketResponseDecoder<'a> {
         buf: ReadBuf<'a>,
         initial_offset: usize,
         offset: usize,
@@ -233,14 +274,14 @@ pub mod decoder {
         pub acting_version: u16,
     }
 
-    impl<'a> Reader<'a> for AccountOrderRateLimitResponseDecoder<'a> {
+    impl<'a> Reader<'a> for WebSocketResponseDecoder<'a> {
         #[inline]
         fn get_buf(&self) -> &ReadBuf<'a> {
             &self.buf
         }
     }
 
-    impl<'a> Decoder<'a> for AccountOrderRateLimitResponseDecoder<'a> {
+    impl<'a> Decoder<'a> for WebSocketResponseDecoder<'a> {
         #[inline]
         fn get_limit(&self) -> usize {
             self.limit
@@ -252,7 +293,7 @@ pub mod decoder {
         }
     }
 
-    impl<'a> AccountOrderRateLimitResponseDecoder<'a> {
+    impl<'a> WebSocketResponseDecoder<'a> {
         pub fn wrap(
             mut self,
             buf: ReadBuf<'a>,
@@ -288,10 +329,52 @@ pub mod decoder {
             )
         }
 
+        /// REQUIRED enum
+        #[inline]
+        pub fn sbe_schema_id_version_deprecated(&self) -> BoolEnum {
+            self.get_buf().get_u8_at(self.offset).into()
+        }
+
+        /// primitive field - 'REQUIRED'
+        #[inline]
+        pub fn status(&self) -> u16 {
+            self.get_buf().get_u16_at(self.offset + 1)
+        }
+
         /// GROUP DECODER (id=100)
         #[inline]
         pub fn rate_limits_decoder(self) -> RateLimitsDecoder<Self> {
             RateLimitsDecoder::default().wrap(self)
+        }
+
+        /// VAR_DATA DECODER - character encoding: 'UTF-8'
+        #[inline]
+        pub fn id_decoder(&mut self) -> (usize, usize) {
+            let offset = self.get_limit();
+            let data_length = self.get_buf().get_u8_at(offset) as usize;
+            self.set_limit(offset + 1 + data_length);
+            (offset + 1, data_length)
+        }
+
+        #[inline]
+        pub fn id_slice(&'a self, coordinates: (usize, usize)) -> &'a [u8] {
+            debug_assert!(self.get_limit() >= coordinates.0 + coordinates.1);
+            self.get_buf().get_slice_at(coordinates.0, coordinates.1)
+        }
+
+        /// VAR_DATA DECODER - character encoding: 'None'
+        #[inline]
+        pub fn result_decoder(&mut self) -> (usize, usize) {
+            let offset = self.get_limit();
+            let data_length = self.get_buf().get_u32_at(offset) as usize;
+            self.set_limit(offset + 4 + data_length);
+            (offset + 4, data_length)
+        }
+
+        #[inline]
+        pub fn result_slice(&'a self, coordinates: (usize, usize)) -> &'a [u8] {
+            debug_assert!(self.get_limit() >= coordinates.0 + coordinates.1);
+            self.get_buf().get_slice_at(coordinates.0, coordinates.1)
         }
     }
 
@@ -299,7 +382,7 @@ pub mod decoder {
     pub struct RateLimitsDecoder<P> {
         parent: Option<P>,
         block_length: usize,
-        count: u32,
+        count: u16,
         index: usize,
         offset: usize,
     }
@@ -339,8 +422,8 @@ pub mod decoder {
         pub fn wrap(mut self, mut parent: P) -> Self {
             let initial_offset = parent.get_limit();
             let block_length = parent.get_buf().get_u16_at(initial_offset) as usize;
-            let count = parent.get_buf().get_u32_at(initial_offset + 2);
-            parent.set_limit(initial_offset + 6);
+            let count = parent.get_buf().get_u16_at(initial_offset + 2);
+            parent.set_limit(initial_offset + 4);
             self.parent = Some(parent);
             self.block_length = block_length;
             self.count = count;
@@ -349,14 +432,14 @@ pub mod decoder {
             self
         }
 
-        /// group token - Token{signal=BEGIN_GROUP, name='rateLimits', referencedName='null', description='null', packageName='null', id=100, version=0, deprecated=0, encodedLength=19, offset=0, componentTokenCount=31, encoding=Encoding{presence=REQUIRED, primitiveType=null, byteOrder=LITTLE_ENDIAN, minValue=null, maxValue=null, nullValue=null, constValue=null, characterEncoding='null', epoch='null', timeUnit=null, semanticType='null'}}
+        /// group token - Token{signal=BEGIN_GROUP, name='rateLimits', referencedName='null', description='null', packageName='null', id=100, version=0, deprecated=0, encodedLength=19, offset=3, componentTokenCount=31, encoding=Encoding{presence=REQUIRED, primitiveType=null, byteOrder=LITTLE_ENDIAN, minValue=null, maxValue=null, nullValue=null, constValue=null, characterEncoding='null', epoch='null', timeUnit=null, semanticType='null'}}
         #[inline]
         pub fn parent(&mut self) -> SbeResult<P> {
             self.parent.take().ok_or(SbeErr::ParentNotSet)
         }
 
         #[inline]
-        pub fn count(&self) -> u32 {
+        pub fn count(&self) -> u16 {
             self.count
         }
 
@@ -402,7 +485,7 @@ pub mod decoder {
 
         /// primitive field - 'REQUIRED'
         #[inline]
-        pub fn num_orders(&self) -> i64 {
+        pub fn current(&self) -> i64 {
             self.get_buf().get_i64_at(self.offset + 11)
         }
     }
