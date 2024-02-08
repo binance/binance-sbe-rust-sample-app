@@ -1,5 +1,9 @@
-use crate::exchange_info::{
-    Decimal, ErrorResponse, ExchangeFilter, ExchangeInfo, RateLimit, Sor, SymbolFilter, SymbolInfo,
+use crate::{
+    exchange_info::{
+        Decimal, ErrorResponse, ExchangeFilter, ExchangeInfo, Sor, SymbolFilter, SymbolInfo,
+    },
+    rate_limit::RateLimit,
+    websocket::WebSocketMetadata,
 };
 use anyhow::bail;
 use spot_sbe::{
@@ -9,18 +13,21 @@ use spot_sbe::{
     max_num_algo_orders_filter_codec, max_num_iceberg_orders_filter_codec,
     max_num_orders_filter_codec, max_position_filter_codec, min_notional_filter_codec,
     notional_filter_codec, percent_price_by_side_filter_codec, percent_price_filter_codec,
-    price_filter_codec, tp_lus_sell_filter_codec, trailing_delta_filter_codec, BoolEnum,
-    ErrorResponseDecoder, ExchangeInfoResponseDecoder, ExchangeMaxNumAlgoOrdersFilterDecoder,
-    ExchangeMaxNumIcebergOrdersFilterDecoder, ExchangeMaxNumOrdersFilterDecoder,
-    IcebergPartsFilterDecoder, LotSizeFilterDecoder, MarketLotSizeFilterDecoder,
-    MaxNumAlgoOrdersFilterDecoder, MaxNumIcebergOrdersFilterDecoder, MaxNumOrdersFilterDecoder,
-    MaxPositionFilterDecoder, MessageHeaderDecoder, MinNotionalFilterDecoder,
-    NotionalFilterDecoder, PercentPriceBySideFilterDecoder, PercentPriceFilterDecoder,
-    PriceFilterDecoder, ReadBuf, TPlusSellFilterDecoder, TrailingDeltaFilterDecoder,
+    price_filter_codec, tp_lus_sell_filter_codec, trailing_delta_filter_codec,
+    web_socket_response_codec, BoolEnum, ErrorResponseDecoder, ExchangeInfoResponseDecoder,
+    ExchangeMaxNumAlgoOrdersFilterDecoder, ExchangeMaxNumIcebergOrdersFilterDecoder,
+    ExchangeMaxNumOrdersFilterDecoder, IcebergPartsFilterDecoder, LotSizeFilterDecoder,
+    MarketLotSizeFilterDecoder, MaxNumAlgoOrdersFilterDecoder, MaxNumIcebergOrdersFilterDecoder,
+    MaxNumOrdersFilterDecoder, MaxPositionFilterDecoder, MessageHeaderDecoder,
+    MinNotionalFilterDecoder, NotionalFilterDecoder, PercentPriceBySideFilterDecoder,
+    PercentPriceFilterDecoder, PriceFilterDecoder, ReadBuf, TPlusSellFilterDecoder,
+    TrailingDeltaFilterDecoder, WebSocketResponseDecoder,
 };
 use std::io::{self, Read};
 
 mod exchange_info;
+mod rate_limit;
+mod websocket;
 
 fn read_payload(mut stream: impl Read) -> io::Result<Vec<u8>> {
     let mut payload = Vec::with_capacity(64 * 1024);
@@ -188,9 +195,46 @@ fn decode_symbol_filter(header: MessageHeaderDecoder<ReadBuf<'_>>) -> anyhow::Re
     })
 }
 
+fn decode_websocket_metadata(
+    header: MessageHeaderDecoder<ReadBuf<'_>>,
+) -> anyhow::Result<(WebSocketMetadata, usize)> {
+    let decoder = WebSocketResponseDecoder::default().header(header);
+    if into_bool(decoder.sbe_schema_id_version_deprecated())? {
+        println!("Warning: sbe-sample-app is using a deprecated schema");
+    }
+    let status = decoder.status();
+    let mut decoder = decoder.rate_limits_decoder();
+    let count = decoder.count();
+    let mut rate_limits = Vec::with_capacity(count.try_into()?);
+    for _ in 0..count {
+        decoder.advance()?;
+        let rate_limit = RateLimit {
+            rate_limit_type: decoder.rate_limit_type(),
+            interval: decoder.interval(),
+            interval_num: decoder.interval_num(),
+            limit: decoder.rate_limit(),
+            count: Some(decoder.current()),
+        };
+        rate_limits.push(rate_limit);
+    }
+    let mut decoder = decoder.parent()?;
+    let coordinates = decoder.id_decoder();
+    let id = decoder.id_slice(coordinates);
+    let id = String::from_utf8(id.to_vec())?;
+    let response = WebSocketMetadata::new(status, rate_limits, id);
+    let coordinates = decoder.result_decoder();
+    Ok((response, coordinates.0))
+}
+
 fn main() -> anyhow::Result<()> {
     let payload = read_payload(io::stdin())?;
-    let decoder = MessageHeaderDecoder::default().wrap(ReadBuf::new(&payload), 0);
+    let mut decoder = MessageHeaderDecoder::default().wrap(ReadBuf::new(&payload), 0);
+    let mut websocket_meta = None;
+    if decoder.template_id() == web_socket_response_codec::SBE_TEMPLATE_ID {
+        let (websocket, offset) = decode_websocket_metadata(decoder)?;
+        websocket_meta = Some(websocket);
+        decoder = MessageHeaderDecoder::default().wrap(ReadBuf::new(&payload[offset..]), 0);
+    }
     if decoder.template_id() == error_response_codec::SBE_TEMPLATE_ID {
         let mut decoder = ErrorResponseDecoder::default().header(decoder);
         let response = ErrorResponse {
@@ -203,24 +247,31 @@ fn main() -> anyhow::Result<()> {
                 String::from_utf8(slice.into())?
             },
         };
-        let yaml = serde_yaml::to_string(&response)?;
+        let yaml = if let Some(websocket_meta) = websocket_meta.as_mut() {
+            websocket_meta.set_error(response);
+            serde_yaml::to_string(&websocket_meta)?
+        } else {
+            serde_yaml::to_string(&response)?
+        };
         println!("{}", yaml);
         return Ok(());
     }
-    let schema_id = decoder.schema_id();
-    if schema_id != exchange_info_response_codec::SBE_SCHEMA_ID {
-        bail!(
-            "Unexpected schema ID. Got {schema_id}; expected {}",
-            exchange_info_response_codec::SBE_SCHEMA_ID
-        );
-    }
-    let version = decoder.version();
-    if version != exchange_info_response_codec::SBE_SCHEMA_VERSION {
-        println!(
-            "Warning: Unexpected schema version. Got {version}; expected {}",
-            exchange_info_response_codec::SBE_SCHEMA_VERSION,
-        );
-        // Schemas with the same ID are expected to be backwards compatible.
+    if websocket_meta.is_none() {
+        let schema_id = decoder.schema_id();
+        if schema_id != exchange_info_response_codec::SBE_SCHEMA_ID {
+            bail!(
+                "Unexpected schema ID. Got {schema_id}; expected {}",
+                exchange_info_response_codec::SBE_SCHEMA_ID
+            );
+        }
+        let version = decoder.version();
+        if version != exchange_info_response_codec::SBE_SCHEMA_VERSION {
+            println!(
+                "Warning: Unexpected schema version. Got {version}; expected {}",
+                exchange_info_response_codec::SBE_SCHEMA_VERSION,
+            );
+            // Schemas with the same ID are expected to be backwards compatible.
+        }
     }
     let decoder = ExchangeInfoResponseDecoder::default().header(decoder);
     let mut decoder = decoder.rate_limits_decoder();
@@ -233,6 +284,7 @@ fn main() -> anyhow::Result<()> {
             interval: decoder.interval(),
             interval_num: decoder.interval_num(),
             limit: decoder.rate_limit(),
+            count: None,
         };
         rate_limits.push(rate_limit);
     }
@@ -348,7 +400,12 @@ fn main() -> anyhow::Result<()> {
         symbols,
         sors,
     };
-    let yaml = serde_yaml::to_string(&response)?;
+    let yaml = if let Some(websocket_meta) = websocket_meta.as_mut() {
+        websocket_meta.set_exchange_info(response);
+        serde_yaml::to_string(&websocket_meta)?
+    } else {
+        serde_yaml::to_string(&response)?
+    };
     println!("{}", yaml);
     Ok(())
 }
