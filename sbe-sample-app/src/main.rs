@@ -45,6 +45,21 @@ fn into_bool(value: BoolEnum) -> anyhow::Result<bool> {
     })
 }
 
+fn decode_error(header: MessageHeaderDecoder<ReadBuf<'_>>) -> anyhow::Result<ErrorResponse> {
+    let mut decoder = ErrorResponseDecoder::default().header(header);
+    let response = ErrorResponse {
+        code: decoder.code(),
+        server_time: decoder.server_time(),
+        retry_after: decoder.retry_after(),
+        msg: {
+            let (offset, length) = decoder.msg_decoder();
+            let slice = decoder.msg_slice((offset, length));
+            String::from_utf8(slice.into())?
+        },
+    };
+    Ok(response)
+}
+
 fn decode_exchange_filter(
     header: MessageHeaderDecoder<ReadBuf<'_>>,
 ) -> anyhow::Result<ExchangeFilter> {
@@ -229,49 +244,43 @@ fn decode_websocket_metadata(
 fn main() -> anyhow::Result<()> {
     let payload = read_payload(io::stdin())?;
     let mut decoder = MessageHeaderDecoder::default().wrap(ReadBuf::new(&payload), 0);
+    // A separate "ErrorResponse" message is returned for errors and its format
+    // is expected to be backwards compatible across all schema IDs.
+    if decoder.template_id() == error_response_codec::SBE_TEMPLATE_ID {
+        let response = decode_error(decoder)?;
+        let yaml = serde_yaml::to_string(&response)?;
+        bail!(yaml);
+    }
     let mut websocket_meta = None;
+    let schema_id = decoder.schema_id();
+    if schema_id != exchange_info_response_codec::SBE_SCHEMA_ID {
+        bail!(
+            "Unexpected schema ID. Got {schema_id}; expected {}",
+            exchange_info_response_codec::SBE_SCHEMA_ID
+        );
+    }
+    let version = decoder.version();
+    if version != exchange_info_response_codec::SBE_SCHEMA_VERSION {
+        println!(
+            "Warning: Unexpected schema version. Got {version}; expected {}",
+            exchange_info_response_codec::SBE_SCHEMA_VERSION,
+        );
+        // Schemas with the same ID are expected to be backwards compatible.
+    }
     if decoder.template_id() == web_socket_response_codec::SBE_TEMPLATE_ID {
         let (websocket, offset) = decode_websocket_metadata(decoder)?;
         websocket_meta = Some(websocket);
         decoder = MessageHeaderDecoder::default().wrap(ReadBuf::new(&payload[offset..]), 0);
     }
     if decoder.template_id() == error_response_codec::SBE_TEMPLATE_ID {
-        let mut decoder = ErrorResponseDecoder::default().header(decoder);
-        let response = ErrorResponse {
-            code: decoder.code(),
-            server_time: decoder.server_time(),
-            retry_after: decoder.retry_after(),
-            msg: {
-                let (offset, length) = decoder.msg_decoder();
-                let slice = decoder.msg_slice((offset, length));
-                String::from_utf8(slice.into())?
-            },
-        };
+        let response = decode_error(decoder)?;
         let yaml = if let Some(websocket_meta) = websocket_meta.as_mut() {
             websocket_meta.set_error(response);
             serde_yaml::to_string(&websocket_meta)?
         } else {
             serde_yaml::to_string(&response)?
         };
-        println!("{}", yaml);
-        return Ok(());
-    }
-    if websocket_meta.is_none() {
-        let schema_id = decoder.schema_id();
-        if schema_id != exchange_info_response_codec::SBE_SCHEMA_ID {
-            bail!(
-                "Unexpected schema ID. Got {schema_id}; expected {}",
-                exchange_info_response_codec::SBE_SCHEMA_ID
-            );
-        }
-        let version = decoder.version();
-        if version != exchange_info_response_codec::SBE_SCHEMA_VERSION {
-            println!(
-                "Warning: Unexpected schema version. Got {version}; expected {}",
-                exchange_info_response_codec::SBE_SCHEMA_VERSION,
-            );
-            // Schemas with the same ID are expected to be backwards compatible.
-        }
+        bail!(yaml);
     }
     let decoder = ExchangeInfoResponseDecoder::default().header(decoder);
     let mut decoder = decoder.rate_limits_decoder();
