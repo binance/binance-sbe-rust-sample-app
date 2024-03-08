@@ -83,8 +83,8 @@ fn decode_exchange_filter(
                 max_num_iceberg_orders: decoder.max_num_iceberg_orders(),
             }
         }
-        _ => {
-            bail!("Unexpected SBE template ID: {}", header.template_id());
+        template_id => {
+            bail!("Unexpected exchange filter template ID: {template_id}");
         }
     })
 }
@@ -271,16 +271,19 @@ fn main() -> anyhow::Result<()> {
         let (websocket, offset) = decode_websocket_metadata(decoder)?;
         websocket_meta = Some(websocket);
         decoder = MessageHeaderDecoder::default().wrap(ReadBuf::new(&payload[offset..]), 0);
+        if decoder.template_id() == error_response_codec::SBE_TEMPLATE_ID {
+            let response = decode_error(decoder)?;
+            let yaml = if let Some(websocket_meta) = websocket_meta.as_mut() {
+                websocket_meta.set_error(response);
+                serde_yaml::to_string(&websocket_meta)?
+            } else {
+                serde_yaml::to_string(&response)?
+            };
+            bail!(yaml);
+        }
     }
-    if decoder.template_id() == error_response_codec::SBE_TEMPLATE_ID {
-        let response = decode_error(decoder)?;
-        let yaml = if let Some(websocket_meta) = websocket_meta.as_mut() {
-            websocket_meta.set_error(response);
-            serde_yaml::to_string(&websocket_meta)?
-        } else {
-            serde_yaml::to_string(&response)?
-        };
-        bail!(yaml);
+    if decoder.template_id() != exchange_info_response_codec::SBE_TEMPLATE_ID {
+        bail!("Unexpected template ID {}", decoder.template_id());
     }
     let decoder = ExchangeInfoResponseDecoder::default().header(decoder);
     let mut decoder = decoder.rate_limits_decoder();
