@@ -23,7 +23,7 @@ The following commands fetch the exchangeInfo SBE response, which the sbe-sample
 ### Pipe REST exchangeInfo SBE response into sbe-sample-app
 
 ```shell
-curl -X GET -H 'Accept: application/sbe' -H 'X-MBX-SBE: 3:1' \
+curl -X GET -H 'Accept: application/sbe' -H 'X-MBX-SBE: 3:4' \
     'https://api.binance.com/api/v3/exchangeInfo' \
     | ./target/debug/sbe-sample-app
 ```
@@ -32,7 +32,7 @@ curl -X GET -H 'Accept: application/sbe' -H 'X-MBX-SBE: 3:1' \
 
 ```shell
 echo '{"id":"93fb61ef-89f8-4d6e-b022-4f035a3fadad","method":"exchangeInfo","params":{"symbol":"BTCUSDT"}}' \
-    | ../tools/websocket_send.py  'wss://ws-api.binance.com:443/ws-api/v3?responseFormat=sbe&sbeSchemaId=3&sbeSchemaVersion=1' \
+    | ../tools/websocket_send.py  'wss://ws-api.binance.com:443/ws-api/v3?responseFormat=sbe&sbeSchemaId=3&sbeSchemaVersion=4' \
     | ./target/debug/sbe-sample-app
 ```
 
