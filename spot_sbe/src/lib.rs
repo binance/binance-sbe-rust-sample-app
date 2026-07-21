@@ -1,3 +1,4 @@
+#![allow(ambiguous_glob_reexports)]
 #![forbid(unsafe_code)]
 #![allow(clippy::all)]
 #![allow(non_camel_case_types)]
@@ -13,19 +14,26 @@ pub mod account_response_codec;
 pub mod account_trades_response_codec;
 pub mod account_type;
 pub mod agg_trades_response_codec;
+pub mod allocation_report_event_codec;
+pub mod allocation_report_type;
+pub mod allocation_status;
+pub mod allocation_transaction_type;
 pub mod allocation_type;
 pub mod allowed_self_trade_prevention_modes;
 pub mod average_price_response_codec;
 pub mod balance_update_event_codec;
+pub mod block_trades_response_codec;
 pub mod book_ticker_response_codec;
 pub mod book_ticker_symbol_response_codec;
 pub mod bool_enum;
+pub mod calculation_type;
 pub mod cancel_open_orders_response_codec;
 pub mod cancel_order_list_response_codec;
 pub mod cancel_order_response_codec;
 pub mod cancel_replace_order_response_codec;
 pub mod cancel_replace_status;
 pub mod contingency_type;
+pub mod counter_party_role;
 pub mod depth_response_codec;
 pub mod error_response_codec;
 pub mod event_stream_terminated_event_codec;
@@ -35,7 +43,10 @@ pub mod exchange_max_num_iceberg_orders_filter_codec;
 pub mod exchange_max_num_order_lists_filter_codec;
 pub mod exchange_max_num_orders_filter_codec;
 pub mod execution_report_event_codec;
+pub mod execution_rule_type;
+pub mod execution_rules_response_codec;
 pub mod execution_type;
+pub mod expiry_reason;
 pub mod external_lock_update_event_codec;
 pub mod filter_type;
 pub mod floor;
@@ -94,11 +105,15 @@ pub mod percent_price_by_side_filter_codec;
 pub mod percent_price_filter_codec;
 pub mod ping_response_codec;
 pub mod price_filter_codec;
+pub mod price_range_execution_rule_codec;
 pub mod price_ticker_response_codec;
 pub mod price_ticker_symbol_response_codec;
 pub mod rate_limit_interval;
 pub mod rate_limit_type;
+pub mod reference_price_calculation_response_codec;
+pub mod reference_price_response_codec;
 pub mod self_trade_prevention_mode;
+pub mod server_shutdown_event_codec;
 pub mod server_time_response_codec;
 pub mod symbol_status;
 pub mod ticker_24_hf_ull_response_codec;
@@ -116,6 +131,7 @@ pub mod trailing_delta_filter_codec;
 pub mod user_data_stream_ping_response_codec;
 pub mod user_data_stream_start_response_codec;
 pub mod user_data_stream_stop_response_codec;
+pub mod user_data_stream_subscribe_listen_token_response_codec;
 pub mod user_data_stream_subscribe_response_codec;
 pub mod user_data_stream_unsubscribe_response_codec;
 pub mod var_string_8_codec;
@@ -127,7 +143,7 @@ pub mod web_socket_session_status_response_codec;
 pub mod web_socket_session_subscriptions_response_codec;
 
 pub const SBE_SCHEMA_ID: u16 = 3;
-pub const SBE_SCHEMA_VERSION: u16 = 1;
+pub const SBE_SCHEMA_VERSION: u16 = 4;
 pub const SBE_SEMANTIC_VERSION: &str = "5.2";
 
 pub type SbeResult<T> = core::result::Result<T, SbeErr>;
