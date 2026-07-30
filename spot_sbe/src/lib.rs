@@ -143,7 +143,7 @@ pub mod web_socket_session_status_response_codec;
 pub mod web_socket_session_subscriptions_response_codec;
 
 pub const SBE_SCHEMA_ID: u16 = 3;
-pub const SBE_SCHEMA_VERSION: u16 = 4;
+pub const SBE_SCHEMA_VERSION: u16 = 5;
 pub const SBE_SEMANTIC_VERSION: &str = "5.2";
 
 pub type SbeResult<T> = core::result::Result<T, SbeErr>;
