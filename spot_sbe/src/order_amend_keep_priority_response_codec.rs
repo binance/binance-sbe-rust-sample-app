@@ -7,7 +7,7 @@ pub use crate::SBE_SCHEMA_ID;
 pub use crate::SBE_SCHEMA_VERSION;
 pub use crate::SBE_SEMANTIC_VERSION;
 
-pub const SBE_BLOCK_LENGTH: u16 = 145;
+pub const SBE_BLOCK_LENGTH: u16 = 153;
 pub const SBE_TEMPLATE_ID: u16 = 317;
 
 pub mod encoder {
@@ -438,6 +438,21 @@ pub mod encoder {
             self.get_buf_mut().put_i64_at(offset, value);
         }
 
+        /// primitive field 'quoteNotionalLimit'
+        /// - min value: -9223372036854775807
+        /// - max value: 9223372036854775807
+        /// - null value: -9223372036854775808_i64
+        /// - characterEncoding: null
+        /// - semanticType: null
+        /// - encodedOffset: 145
+        /// - encodedLength: 8
+        /// - version: 6
+        #[inline]
+        pub fn quote_notional_limit(&mut self, value: i64) {
+            let offset = self.offset + 145;
+            self.get_buf_mut().put_i64_at(offset, value);
+        }
+
         /// GROUP ENCODER (id=101)
         #[inline]
         pub fn list_status_encoder(
@@ -824,7 +839,7 @@ pub mod encoder {
 
         #[inline]
         pub fn block_length() -> u16 {
-            127
+            135
         }
 
         #[inline]
@@ -1159,6 +1174,21 @@ pub mod encoder {
         #[inline]
         pub fn pegged_price(&mut self, value: i64) {
             let offset = self.offset + 119;
+            self.get_buf_mut().put_i64_at(offset, value);
+        }
+
+        /// primitive field 'quoteNotionalLimit'
+        /// - min value: -9223372036854775807
+        /// - max value: 9223372036854775807
+        /// - null value: -9223372036854775808_i64
+        /// - characterEncoding: null
+        /// - semanticType: null
+        /// - encodedOffset: 127
+        /// - encodedLength: 8
+        /// - version: 6
+        #[inline]
+        pub fn quote_notional_limit(&mut self, value: i64) {
+            let offset = self.offset + 127;
             self.get_buf_mut().put_i64_at(offset, value);
         }
 
@@ -1508,6 +1538,21 @@ pub mod decoder {
             }
         }
 
+        /// primitive field - 'OPTIONAL' { null_value: '-9223372036854775808_i64' }
+        #[inline]
+        pub fn quote_notional_limit(&self) -> Option<i64> {
+            if self.acting_version() < 6 {
+                return None;
+            }
+
+            let value = self.get_buf().get_i64_at(self.offset + 145);
+            if value == -9223372036854775808_i64 {
+                None
+            } else {
+                Some(value)
+            }
+        }
+
         /// GROUP DECODER (id=101)
         #[inline]
         pub fn list_status_decoder(self) -> ListStatusDecoder<Self> {
@@ -1630,7 +1675,7 @@ pub mod decoder {
             self
         }
 
-        /// group token - Token{signal=BEGIN_GROUP, name='listStatus', referencedName='null', description='null', packageName='null', id=101, version=0, deprecated=0, encodedLength=10, offset=145, componentTokenCount=58, encoding=Encoding{presence=REQUIRED, primitiveType=null, byteOrder=LITTLE_ENDIAN, minValue=null, maxValue=null, nullValue=null, constValue=null, characterEncoding='null', epoch='null', timeUnit=null, semanticType='null'}}
+        /// group token - Token{signal=BEGIN_GROUP, name='listStatus', referencedName='null', description='null', packageName='null', id=101, version=0, deprecated=0, encodedLength=10, offset=153, componentTokenCount=58, encoding=Encoding{presence=REQUIRED, primitiveType=null, byteOrder=LITTLE_ENDIAN, minValue=null, maxValue=null, nullValue=null, constValue=null, characterEncoding='null', epoch='null', timeUnit=null, semanticType='null'}}
         #[inline]
         pub fn parent(&mut self) -> SbeResult<P> {
             self.parent.take().ok_or(SbeErr::ParentNotSet)
@@ -1926,7 +1971,7 @@ pub mod decoder {
             self
         }
 
-        /// group token - Token{signal=BEGIN_GROUP, name='relatedOrders', referencedName='null', description='null', packageName='null', id=102, version=0, deprecated=0, encodedLength=127, offset=-1, componentTokenCount=153, encoding=Encoding{presence=REQUIRED, primitiveType=null, byteOrder=LITTLE_ENDIAN, minValue=null, maxValue=null, nullValue=null, constValue=null, characterEncoding='null', epoch='null', timeUnit=null, semanticType='null'}}
+        /// group token - Token{signal=BEGIN_GROUP, name='relatedOrders', referencedName='null', description='null', packageName='null', id=102, version=0, deprecated=0, encodedLength=135, offset=-1, componentTokenCount=156, encoding=Encoding{presence=REQUIRED, primitiveType=null, byteOrder=LITTLE_ENDIAN, minValue=null, maxValue=null, nullValue=null, constValue=null, characterEncoding='null', epoch='null', timeUnit=null, semanticType='null'}}
         #[inline]
         pub fn parent(&mut self) -> SbeResult<P> {
             self.parent.take().ok_or(SbeErr::ParentNotSet)
@@ -2175,6 +2220,21 @@ pub mod decoder {
             }
 
             let value = self.get_buf().get_i64_at(self.offset + 119);
+            if value == -9223372036854775808_i64 {
+                None
+            } else {
+                Some(value)
+            }
+        }
+
+        /// primitive field - 'OPTIONAL' { null_value: '-9223372036854775808_i64' }
+        #[inline]
+        pub fn quote_notional_limit(&self) -> Option<i64> {
+            if self.acting_version() < 6 {
+                return None;
+            }
+
+            let value = self.get_buf().get_i64_at(self.offset + 127);
             if value == -9223372036854775808_i64 {
                 None
             } else {

@@ -9,6 +9,8 @@ pub enum ExpiryReason {
     UnfilledFokOrderExpired = 0x6_u8,
     InsufficientLiquidity = 0x7_u8,
     ExecutionRulePriceRangeExceeded = 0x8_u8,
+    Exhausted = 0x9_u8,
+    InsufficientQuoteNotionalLimit = 0xa_u8,
     NonRepresentable = 0xfe_u8,
     #[default]
     NullVal = 0xff_u8,
@@ -25,6 +27,8 @@ impl From<u8> for ExpiryReason {
             0x6_u8 => Self::UnfilledFokOrderExpired,
             0x7_u8 => Self::InsufficientLiquidity,
             0x8_u8 => Self::ExecutionRulePriceRangeExceeded,
+            0x9_u8 => Self::Exhausted,
+            0xa_u8 => Self::InsufficientQuoteNotionalLimit,
             0xfe_u8 => Self::NonRepresentable,
             _ => Self::NullVal,
         }
@@ -42,6 +46,8 @@ impl From<ExpiryReason> for u8 {
             ExpiryReason::UnfilledFokOrderExpired => 0x6_u8,
             ExpiryReason::InsufficientLiquidity => 0x7_u8,
             ExpiryReason::ExecutionRulePriceRangeExceeded => 0x8_u8,
+            ExpiryReason::Exhausted => 0x9_u8,
+            ExpiryReason::InsufficientQuoteNotionalLimit => 0xa_u8,
             ExpiryReason::NonRepresentable => 0xfe_u8,
             ExpiryReason::NullVal => 0xff_u8,
         }
@@ -61,6 +67,8 @@ impl core::str::FromStr for ExpiryReason {
             "UnfilledFokOrderExpired" => Ok(Self::UnfilledFokOrderExpired),
             "InsufficientLiquidity" => Ok(Self::InsufficientLiquidity),
             "ExecutionRulePriceRangeExceeded" => Ok(Self::ExecutionRulePriceRangeExceeded),
+            "Exhausted" => Ok(Self::Exhausted),
+            "InsufficientQuoteNotionalLimit" => Ok(Self::InsufficientQuoteNotionalLimit),
             "NonRepresentable" => Ok(Self::NonRepresentable),
             _ => Ok(Self::NullVal),
         }
@@ -78,6 +86,8 @@ impl core::fmt::Display for ExpiryReason {
             Self::UnfilledFokOrderExpired => write!(f, "UnfilledFokOrderExpired"),
             Self::InsufficientLiquidity => write!(f, "InsufficientLiquidity"),
             Self::ExecutionRulePriceRangeExceeded => write!(f, "ExecutionRulePriceRangeExceeded"),
+            Self::Exhausted => write!(f, "Exhausted"),
+            Self::InsufficientQuoteNotionalLimit => write!(f, "InsufficientQuoteNotionalLimit"),
             Self::NonRepresentable => write!(f, "NonRepresentable"),
             Self::NullVal => write!(f, "NullVal"),
         }

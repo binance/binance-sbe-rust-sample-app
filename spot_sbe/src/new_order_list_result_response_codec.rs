@@ -374,7 +374,7 @@ pub mod encoder {
 
         #[inline]
         pub fn block_length() -> u16 {
-            152
+            160
         }
 
         #[inline]
@@ -764,6 +764,21 @@ pub mod encoder {
             self.get_buf_mut().put_u8_at(offset, value as u8)
         }
 
+        /// primitive field 'quoteNotionalLimit'
+        /// - min value: -9223372036854775807
+        /// - max value: 9223372036854775807
+        /// - null value: -9223372036854775808_i64
+        /// - characterEncoding: null
+        /// - semanticType: null
+        /// - encodedOffset: 152
+        /// - encodedLength: 8
+        /// - version: 6
+        #[inline]
+        pub fn quote_notional_limit(&mut self, value: i64) {
+            let offset = self.offset + 152;
+            self.get_buf_mut().put_i64_at(offset, value);
+        }
+
         /// VAR_DATA ENCODER - character encoding: 'UTF-8'
         #[inline]
         pub fn symbol(&mut self, value: &str) {
@@ -1150,7 +1165,7 @@ pub mod decoder {
             self
         }
 
-        /// group token - Token{signal=BEGIN_GROUP, name='orderReports', referencedName='null', description='null', packageName='null', id=101, version=0, deprecated=0, encodedLength=152, offset=-1, componentTokenCount=175, encoding=Encoding{presence=REQUIRED, primitiveType=null, byteOrder=LITTLE_ENDIAN, minValue=null, maxValue=null, nullValue=null, constValue=null, characterEncoding='null', epoch='null', timeUnit=null, semanticType='null'}}
+        /// group token - Token{signal=BEGIN_GROUP, name='orderReports', referencedName='null', description='null', packageName='null', id=101, version=0, deprecated=0, encodedLength=160, offset=-1, componentTokenCount=180, encoding=Encoding{presence=REQUIRED, primitiveType=null, byteOrder=LITTLE_ENDIAN, minValue=null, maxValue=null, nullValue=null, constValue=null, characterEncoding='null', epoch='null', timeUnit=null, semanticType='null'}}
         #[inline]
         pub fn parent(&mut self) -> SbeResult<P> {
             self.parent.take().ok_or(SbeErr::ParentNotSet)
@@ -1437,6 +1452,21 @@ pub mod decoder {
             }
 
             self.get_buf().get_u8_at(self.offset + 151).into()
+        }
+
+        /// primitive field - 'OPTIONAL' { null_value: '-9223372036854775808_i64' }
+        #[inline]
+        pub fn quote_notional_limit(&self) -> Option<i64> {
+            if self.acting_version() < 6 {
+                return None;
+            }
+
+            let value = self.get_buf().get_i64_at(self.offset + 152);
+            if value == -9223372036854775808_i64 {
+                None
+            } else {
+                Some(value)
+            }
         }
 
         /// VAR_DATA DECODER - character encoding: 'UTF-8'

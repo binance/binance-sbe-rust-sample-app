@@ -374,7 +374,7 @@ pub mod encoder {
 
         #[inline]
         pub fn block_length() -> u16 {
-            152
+            160
         }
 
         #[inline]
@@ -764,6 +764,21 @@ pub mod encoder {
             self.get_buf_mut().put_u8_at(offset, value as u8)
         }
 
+        /// primitive field 'quoteNotionalLimit'
+        /// - min value: -9223372036854775807
+        /// - max value: 9223372036854775807
+        /// - null value: -9223372036854775808_i64
+        /// - characterEncoding: null
+        /// - semanticType: null
+        /// - encodedOffset: 152
+        /// - encodedLength: 8
+        /// - version: 6
+        #[inline]
+        pub fn quote_notional_limit(&mut self, value: i64) {
+            let offset = self.offset + 152;
+            self.get_buf_mut().put_i64_at(offset, value);
+        }
+
         /// GROUP ENCODER (id=100)
         #[inline]
         pub fn fills_encoder(
@@ -1064,7 +1079,7 @@ pub mod encoder {
 
         #[inline]
         pub fn block_length() -> u16 {
-            40
+            41
         }
 
         #[inline]
@@ -1162,6 +1177,16 @@ pub mod encoder {
         pub fn maker_prevented_quantity(&mut self, value: i64) {
             let offset = self.offset + 32;
             self.get_buf_mut().put_i64_at(offset, value);
+        }
+
+        /// REQUIRED enum
+        #[inline]
+        pub fn effective_self_trade_prevention_mode(
+            &mut self,
+            value: self_trade_prevention_mode::SelfTradePreventionMode,
+        ) {
+            let offset = self.offset + 40;
+            self.get_buf_mut().put_u8_at(offset, value as u8)
         }
 
         /// VAR_DATA ENCODER - character encoding: 'UTF-8'
@@ -1540,7 +1565,7 @@ pub mod decoder {
             self
         }
 
-        /// group token - Token{signal=BEGIN_GROUP, name='orderReports', referencedName='null', description='null', packageName='null', id=101, version=0, deprecated=0, encodedLength=152, offset=-1, componentTokenCount=239, encoding=Encoding{presence=REQUIRED, primitiveType=null, byteOrder=LITTLE_ENDIAN, minValue=null, maxValue=null, nullValue=null, constValue=null, characterEncoding='null', epoch='null', timeUnit=null, semanticType='null'}}
+        /// group token - Token{signal=BEGIN_GROUP, name='orderReports', referencedName='null', description='null', packageName='null', id=101, version=0, deprecated=0, encodedLength=160, offset=-1, componentTokenCount=255, encoding=Encoding{presence=REQUIRED, primitiveType=null, byteOrder=LITTLE_ENDIAN, minValue=null, maxValue=null, nullValue=null, constValue=null, characterEncoding='null', epoch='null', timeUnit=null, semanticType='null'}}
         #[inline]
         pub fn parent(&mut self) -> SbeResult<P> {
             self.parent.take().ok_or(SbeErr::ParentNotSet)
@@ -1829,6 +1854,21 @@ pub mod decoder {
             self.get_buf().get_u8_at(self.offset + 151).into()
         }
 
+        /// primitive field - 'OPTIONAL' { null_value: '-9223372036854775808_i64' }
+        #[inline]
+        pub fn quote_notional_limit(&self) -> Option<i64> {
+            if self.acting_version() < 6 {
+                return None;
+            }
+
+            let value = self.get_buf().get_i64_at(self.offset + 152);
+            if value == -9223372036854775808_i64 {
+                None
+            } else {
+                Some(value)
+            }
+        }
+
         /// GROUP DECODER (id=100)
         #[inline]
         pub fn fills_decoder(self) -> FillsDecoder<Self> {
@@ -1942,7 +1982,7 @@ pub mod decoder {
             self
         }
 
-        /// group token - Token{signal=BEGIN_GROUP, name='fills', referencedName='null', description='null', packageName='null', id=100, version=0, deprecated=0, encodedLength=42, offset=152, componentTokenCount=37, encoding=Encoding{presence=REQUIRED, primitiveType=null, byteOrder=LITTLE_ENDIAN, minValue=null, maxValue=null, nullValue=null, constValue=null, characterEncoding='null', epoch='null', timeUnit=null, semanticType='null'}}
+        /// group token - Token{signal=BEGIN_GROUP, name='fills', referencedName='null', description='null', packageName='null', id=100, version=0, deprecated=0, encodedLength=42, offset=160, componentTokenCount=37, encoding=Encoding{presence=REQUIRED, primitiveType=null, byteOrder=LITTLE_ENDIAN, minValue=null, maxValue=null, nullValue=null, constValue=null, characterEncoding='null', epoch='null', timeUnit=null, semanticType='null'}}
         #[inline]
         pub fn parent(&mut self) -> SbeResult<P> {
             self.parent.take().ok_or(SbeErr::ParentNotSet)
@@ -2109,7 +2149,7 @@ pub mod decoder {
             self
         }
 
-        /// group token - Token{signal=BEGIN_GROUP, name='preventedMatches', referencedName='null', description='null', packageName='null', id=101, version=0, deprecated=0, encodedLength=40, offset=-1, componentTokenCount=27, encoding=Encoding{presence=REQUIRED, primitiveType=null, byteOrder=LITTLE_ENDIAN, minValue=null, maxValue=null, nullValue=null, constValue=null, characterEncoding='null', epoch='null', timeUnit=null, semanticType='null'}}
+        /// group token - Token{signal=BEGIN_GROUP, name='preventedMatches', referencedName='null', description='null', packageName='null', id=101, version=0, deprecated=0, encodedLength=41, offset=-1, componentTokenCount=38, encoding=Encoding{presence=REQUIRED, primitiveType=null, byteOrder=LITTLE_ENDIAN, minValue=null, maxValue=null, nullValue=null, constValue=null, characterEncoding='null', epoch='null', timeUnit=null, semanticType='null'}}
         #[inline]
         pub fn parent(&mut self) -> SbeResult<P> {
             self.parent.take().ok_or(SbeErr::ParentNotSet)
@@ -2189,6 +2229,18 @@ pub mod decoder {
             } else {
                 Some(value)
             }
+        }
+
+        /// REQUIRED enum
+        #[inline]
+        pub fn effective_self_trade_prevention_mode(
+            &self,
+        ) -> self_trade_prevention_mode::SelfTradePreventionMode {
+            if self.acting_version() < 6 {
+                return self_trade_prevention_mode::SelfTradePreventionMode::default();
+            }
+
+            self.get_buf().get_u8_at(self.offset + 40).into()
         }
 
         /// VAR_DATA DECODER - character encoding: 'UTF-8'

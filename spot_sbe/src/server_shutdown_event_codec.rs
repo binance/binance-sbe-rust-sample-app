@@ -7,7 +7,7 @@ pub use crate::SBE_SCHEMA_ID;
 pub use crate::SBE_SCHEMA_VERSION;
 pub use crate::SBE_SEMANTIC_VERSION;
 
-pub const SBE_BLOCK_LENGTH: u16 = 8;
+pub const SBE_BLOCK_LENGTH: u16 = 16;
 pub const SBE_TEMPLATE_ID: u16 = 610;
 
 pub mod encoder {
@@ -77,6 +77,21 @@ pub mod encoder {
         #[inline]
         pub fn event_time(&mut self, value: i64) {
             let offset = self.offset;
+            self.get_buf_mut().put_i64_at(offset, value);
+        }
+
+        /// primitive field 'shutdownTime'
+        /// - min value: -9223372036854775807
+        /// - max value: 9223372036854775807
+        /// - null value: -9223372036854775808_i64
+        /// - characterEncoding: null
+        /// - semanticType: null
+        /// - encodedOffset: 8
+        /// - encodedLength: 8
+        /// - version: 6
+        #[inline]
+        pub fn shutdown_time(&mut self, value: i64) {
+            let offset = self.offset + 8;
             self.get_buf_mut().put_i64_at(offset, value);
         }
     }
@@ -162,6 +177,16 @@ pub mod decoder {
         #[inline]
         pub fn event_time(&self) -> i64 {
             self.get_buf().get_i64_at(self.offset)
+        }
+
+        /// primitive field - 'REQUIRED'
+        #[inline]
+        pub fn shutdown_time(&self) -> i64 {
+            if self.acting_version() < 6 {
+                return -9223372036854775808_i64;
+            }
+
+            self.get_buf().get_i64_at(self.offset + 8)
         }
     }
 } // end decoder

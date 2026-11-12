@@ -7,7 +7,7 @@ pub use crate::SBE_SCHEMA_ID;
 pub use crate::SBE_SCHEMA_VERSION;
 pub use crate::SBE_SEMANTIC_VERSION;
 
-pub const SBE_BLOCK_LENGTH: u16 = 163;
+pub const SBE_BLOCK_LENGTH: u16 = 171;
 pub const SBE_TEMPLATE_ID: u16 = 304;
 
 pub mod encoder {
@@ -482,6 +482,21 @@ pub mod encoder {
             self.get_buf_mut().put_u8_at(offset, value as u8)
         }
 
+        /// primitive field 'quoteNotionalLimit'
+        /// - min value: -9223372036854775807
+        /// - max value: 9223372036854775807
+        /// - null value: -9223372036854775808_i64
+        /// - characterEncoding: null
+        /// - semanticType: null
+        /// - encodedOffset: 163
+        /// - encodedLength: 8
+        /// - version: 6
+        #[inline]
+        pub fn quote_notional_limit(&mut self, value: i64) {
+            let offset = self.offset + 163;
+            self.get_buf_mut().put_i64_at(offset, value);
+        }
+
         /// VAR_DATA ENCODER - character encoding: 'UTF-8'
         #[inline]
         pub fn symbol(&mut self, value: &str) {
@@ -859,6 +874,21 @@ pub mod decoder {
             }
 
             self.get_buf().get_u8_at(self.offset + 162).into()
+        }
+
+        /// primitive field - 'OPTIONAL' { null_value: '-9223372036854775808_i64' }
+        #[inline]
+        pub fn quote_notional_limit(&self) -> Option<i64> {
+            if self.acting_version() < 6 {
+                return None;
+            }
+
+            let value = self.get_buf().get_i64_at(self.offset + 163);
+            if value == -9223372036854775808_i64 {
+                None
+            } else {
+                Some(value)
+            }
         }
 
         /// VAR_DATA DECODER - character encoding: 'UTF-8'

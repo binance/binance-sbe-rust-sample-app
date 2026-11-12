@@ -401,7 +401,7 @@ pub mod encoder {
 
         #[inline]
         pub fn block_length() -> u16 {
-            19
+            22
         }
 
         #[inline]
@@ -585,6 +585,27 @@ pub mod encoder {
         #[inline]
         pub fn peg_instructions_allowed(&mut self, value: bool_enum::BoolEnum) {
             let offset = self.offset + 18;
+            self.get_buf_mut().put_u8_at(offset, value as u8)
+        }
+
+        /// REQUIRED enum
+        #[inline]
+        pub fn opo_allowed(&mut self, value: bool_enum::BoolEnum) {
+            let offset = self.offset + 19;
+            self.get_buf_mut().put_u8_at(offset, value as u8)
+        }
+
+        /// REQUIRED enum
+        #[inline]
+        pub fn market_quote_notional_limit_allowed(&mut self, value: bool_enum::BoolEnum) {
+            let offset = self.offset + 20;
+            self.get_buf_mut().put_u8_at(offset, value as u8)
+        }
+
+        /// REQUIRED enum
+        #[inline]
+        pub fn limit_quote_notional_limit_allowed(&mut self, value: bool_enum::BoolEnum) {
+            let offset = self.offset + 21;
             self.get_buf_mut().put_u8_at(offset, value as u8)
         }
 
@@ -1546,7 +1567,7 @@ pub mod decoder {
             self
         }
 
-        /// group token - Token{signal=BEGIN_GROUP, name='symbols', referencedName='null', description='null', packageName='null', id=102, version=0, deprecated=0, encodedLength=19, offset=-1, componentTokenCount=170, encoding=Encoding{presence=REQUIRED, primitiveType=null, byteOrder=LITTLE_ENDIAN, minValue=null, maxValue=null, nullValue=null, constValue=null, characterEncoding='null', epoch='null', timeUnit=null, semanticType='null'}}
+        /// group token - Token{signal=BEGIN_GROUP, name='symbols', referencedName='null', description='null', packageName='null', id=102, version=0, deprecated=0, encodedLength=22, offset=-1, componentTokenCount=188, encoding=Encoding{presence=REQUIRED, primitiveType=null, byteOrder=LITTLE_ENDIAN, minValue=null, maxValue=null, nullValue=null, constValue=null, characterEncoding='null', epoch='null', timeUnit=null, semanticType='null'}}
         #[inline]
         pub fn parent(&mut self) -> SbeResult<P> {
             self.parent.take().ok_or(SbeErr::ParentNotSet)
@@ -1696,6 +1717,36 @@ pub mod decoder {
             self.get_buf().get_u8_at(self.offset + 18).into()
         }
 
+        /// REQUIRED enum
+        #[inline]
+        pub fn opo_allowed(&self) -> bool_enum::BoolEnum {
+            if self.acting_version() < 6 {
+                return bool_enum::BoolEnum::default();
+            }
+
+            self.get_buf().get_u8_at(self.offset + 19).into()
+        }
+
+        /// REQUIRED enum
+        #[inline]
+        pub fn market_quote_notional_limit_allowed(&self) -> bool_enum::BoolEnum {
+            if self.acting_version() < 6 {
+                return bool_enum::BoolEnum::default();
+            }
+
+            self.get_buf().get_u8_at(self.offset + 20).into()
+        }
+
+        /// REQUIRED enum
+        #[inline]
+        pub fn limit_quote_notional_limit_allowed(&self) -> bool_enum::BoolEnum {
+            if self.acting_version() < 6 {
+                return bool_enum::BoolEnum::default();
+            }
+
+            self.get_buf().get_u8_at(self.offset + 21).into()
+        }
+
         /// GROUP DECODER (id=100)
         #[inline]
         pub fn filters_decoder(self) -> FiltersDecoder<Self> {
@@ -1827,7 +1878,7 @@ pub mod decoder {
             self
         }
 
-        /// group token - Token{signal=BEGIN_GROUP, name='filters', referencedName='null', description='null', packageName='null', id=100, version=0, deprecated=0, encodedLength=0, offset=19, componentTokenCount=12, encoding=Encoding{presence=REQUIRED, primitiveType=null, byteOrder=LITTLE_ENDIAN, minValue=null, maxValue=null, nullValue=null, constValue=null, characterEncoding='null', epoch='null', timeUnit=null, semanticType='null'}}
+        /// group token - Token{signal=BEGIN_GROUP, name='filters', referencedName='null', description='null', packageName='null', id=100, version=0, deprecated=0, encodedLength=0, offset=22, componentTokenCount=12, encoding=Encoding{presence=REQUIRED, primitiveType=null, byteOrder=LITTLE_ENDIAN, minValue=null, maxValue=null, nullValue=null, constValue=null, characterEncoding='null', epoch='null', timeUnit=null, semanticType='null'}}
         #[inline]
         pub fn parent(&mut self) -> SbeResult<P> {
             self.parent.take().ok_or(SbeErr::ParentNotSet)
